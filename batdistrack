@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+FILE=/tmp/batdistrack
+
+if [ "${1}" == "pre" ]; then
+	if [[ "1" == `cat /sys/class/power_supply/AC/online` ]]; then
+		echo "Charging. Discharge during suspend will not be tracked."
+		if [[ -f "$FILE" ]]; then
+			rm $FILE
+		fi
+	else
+		echo "Saving time and charge."
+		date +'%s' > $FILE
+		cat /sys/class/power_supply/BAT0/energy_now >> $FILE
+	fi
+elif [ "${1}" == "post" ]; then
+	if [ -f "$FILE" ]; then
+		while read timestamp; read charge
+		do
+			tsdiff=$((`date +'%s'` -  $timestamp))
+			tdiff=$(bc <<< "scale=4;$tsdiff/3600")
+			cdiff=$((charge - `cat /sys/class/power_supply/BAT0/energy_now`))
+			dis=$(bc <<< "scale=5;($cdiff/1000000)/$tdiff")
+
+			date -d@$tsdiff -u +"Suspend duration: %Hh %Mm."
+			echo Discharge rate: $dis W/h.
+		done < $FILE
+		rm $FILE
+	fi
+fi
+
+
+
