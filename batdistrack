@@ -23,7 +23,7 @@ elif [ "${1}" == "post" ]; then
 			dis=$(bc <<< "scale=5;($cdiff/1000000)/$tdiff")
 
 			date -d@$tsdiff -u +"Suspend duration: %Hh %Mm."
-			echo Discharge rate: $dis W/h.
+			echo Discharge rate: $dis W.
 		done < $FILE
 		rm $FILE
 	fi
