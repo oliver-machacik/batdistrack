@@ -15,14 +15,14 @@ The discharge rate will be logged after each suspend/resume. Nothing will be log
 ```
 % journalctl -u systemd-suspend.service | tail
 
-Jul 27 10:05:38 nb-oli systemd[1]: systemd-suspend.service: Consumed 1.282s CPU time.
-Jul 27 10:06:39 nb-oli systemd[1]: Starting System Suspend...
-Jul 27 10:06:39 nb-oli systemd-sleep[24567]: Saving time and charge.
-Jul 27 10:06:40 nb-oli systemd-sleep[24565]: Entering sleep state 'suspend'...
-Jul 27 10:09:56 nb-oli systemd-sleep[24565]: System returned from sleep state.
-Jul 27 10:09:56 nb-oli systemd-sleep[24811]: Suspend duration: 00h 03m.
-Jul 27 10:09:56 nb-oli systemd-sleep[24789]: Discharge rate: .91407 W/h.
-Jul 27 10:09:56 nb-oli systemd[1]: systemd-suspend.service: Deactivated successfully.
-Jul 27 10:09:56 nb-oli systemd[1]: Finished System Suspend.
-Jul 27 10:09:56 nb-oli systemd[1]: systemd-suspend.service: Consumed 1.313s CPU time.
+Sep 01 18:59:40 nb-oli systemd[1]: systemd-suspend.service: Consumed 1.320s CPU time.
+Sep 01 19:07:41 nb-oli systemd[1]: Starting System Suspend...
+Sep 01 19:07:41 nb-oli systemd-sleep[35407]: Saving time and charge.
+Sep 01 19:07:42 nb-oli systemd-sleep[35405]: Entering sleep state 'suspend'...
+Sep 02 09:04:38 nb-oli systemd-sleep[35405]: System returned from sleep state.
+Sep 02 09:04:38 nb-oli systemd-sleep[35686]: Suspend duration: 13h:56m:57s
+Sep 02 09:04:38 nb-oli systemd-sleep[35686]: Discharge rate: .69968 W/h.
+Sep 02 09:04:38 nb-oli systemd[1]: systemd-suspend.service: Deactivated successfully.
+Sep 02 09:04:38 nb-oli systemd[1]: Finished System Suspend.
+Sep 02 09:04:38 nb-oli systemd[1]: systemd-suspend.service: Consumed 1.405s CPU time.
 ```

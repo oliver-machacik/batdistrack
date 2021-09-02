@@ -18,12 +18,12 @@ elif [ "${1}" == "post" ]; then
 		while read timestamp; read charge
 		do
 			tsdiff=$((`date +'%s'` -  $timestamp))
-			tdiff=$(bc <<< "scale=4;$tsdiff/3600")
+			tdiff=$(bc <<< "scale=5;$tsdiff/3600")
 			cdiff=$((charge - `cat /sys/class/power_supply/BAT0/energy_now`))
 			dis=$(bc <<< "scale=5;($cdiff/1000000)/$tdiff")
 
-			date -d@$tsdiff -u +"Suspend duration: %Hh %Mm."
-			echo Discharge rate: $dis W.
+			printf 'Suspend duration: %02dh:%02dm:%02ds\n' $((tsdiff/3600)) $((tsdiff%3600/60)) $((tsdiff%60))
+			echo Discharge rate: $dis W/h.
 		done < $FILE
 		rm $FILE
 	fi
