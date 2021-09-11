@@ -3,31 +3,28 @@
 FILE=/tmp/powerdrain
 
 if [ "${1}" == "pre" ]; then
-	if [[ "1" == `cat /sys/class/power_supply/AC/online` ]]; then
-		echo "Charging. Discharge during suspend will not be tracked."
-		if [[ -f "$FILE" ]]; then
-			rm $FILE
-		fi
-	else
-		echo "Saving time and charge."
-		date +'%s' > $FILE
-		cat /sys/class/power_supply/BAT0/energy_now >> $FILE
-	fi
+    if [[ "1" == `cat /sys/class/power_supply/AC/online` ]]; then
+        echo "Charging. Discharge during suspend will not be tracked."
+        if [[ -f "$FILE" ]]; then
+            rm $FILE
+        fi
+    else
+        echo "Saving time and charge."
+        date +'%s' > $FILE
+        cat /sys/class/power_supply/BAT0/energy_now >> $FILE
+    fi
 elif [ "${1}" == "post" ]; then
-	if [ -f "$FILE" ]; then
-		while read timestamp; read charge
-		do
-			tsdiff=$((`date +'%s'` -  $timestamp))
-			tdiff=$(bc <<< "scale=5;$tsdiff/3600")
-			cdiff=$((charge - `cat /sys/class/power_supply/BAT0/energy_now`))
-			dis=$(bc <<< "scale=5;($cdiff/1000000)/$tdiff")
+    if [ -f "$FILE" ]; then
+        while read timestamp; read charge
+        do
+            tsdiff=$((`date +'%s'` -  $timestamp))
+            tdiff=$(bc <<< "scale=5;$tsdiff/3600")
+            cdiff=$((charge - `cat /sys/class/power_supply/BAT0/energy_now`))
+            dis=$(bc <<< "scale=5;($cdiff/1000000)/$tdiff")
 
-			printf 'Suspend duration: %02dh:%02dm:%02ds\n' $((tsdiff/3600)) $((tsdiff%3600/60)) $((tsdiff%60))
-			echo Discharge rate: $dis W/h.
-		done < $FILE
-		rm $FILE
-	fi
+            printf 'Suspend duration: %02dh:%02dm:%02ds\n' $((tsdiff/3600)) $((tsdiff%3600/60)) $((tsdiff%60))
+            echo Discharge rate: $dis W/h.
+        done < $FILE
+        rm $FILE
+    fi
 fi
-
-
-
