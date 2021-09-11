@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-FILE=/tmp/batdistrack
+FILE=/tmp/powerdrain
 
 if [ "${1}" == "pre" ]; then
 	if [[ "1" == `cat /sys/class/power_supply/AC/online` ]]; then
