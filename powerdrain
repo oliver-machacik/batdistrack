@@ -23,9 +23,9 @@ elif [ "${1}" == "post" ]; then
             tsdiff=$(($(date +'%s') - $timestamp))
             tdiff=$(bc <<< "scale=5;$tsdiff/3600")
             cdiff=$((charge - $(cat /sys/class/power_supply/BAT0/energy_now)))
-            dis=$(bc <<< "scale=5;($cdiff/1000000)/$tdiff")
-            printf '[INFO] Duration: %02d:%02d:%02d\n' \
-                    $((tsdiff/3600)) $((tsdiff%3600/60)) $((tsdiff%60))
+            dis_raw=$(bc <<< "scale=5;($cdiff/1000000)/$tdiff")
+            dis=$(printf '%3.5f' "$dis_raw")
+            printf '[INFO] Duration: %02d:%02d:%02d\n' $((tsdiff/3600)) $((tsdiff%3600/60)) $((tsdiff%60))
             echo "[INFO] Discharge rate: $dis W/h."
         done < "$FILE"
         rm "$FILE"
