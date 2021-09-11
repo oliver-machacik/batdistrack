@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+FILE=$TMPDIR/powerdrain
+
+if [ "${1}" == "pre" ]; then
+    if [[ "1" == $(cat /sys/class/power_supply/AC/online) ]]; then
+        echo "[INFO] PSU detected. Discharge won't be tracked."
+        rm "$FILE"
+        if [ $? -ne 0 ]; then
+            echo "[ERROR] Unable to remove $FILE"
+        fi
+    else
+        date +'%s' > "$FILE" && \
+        cat /sys/class/power_supply/BAT0/energy_now >> "$FILE"
+        if [ $? -ne 0 ]; then
+            echo "[ERROR] Unable to write in $FILE"
+        fi
+    fi
+elif [ "${1}" == "post" ]; then
+    if [[ -r "$FILE" ]]; then
+        while read -r timestamp; read -r charge
+        do
+            tsdiff=$(($(date +'%s') - $timestamp))
+            tdiff=$(bc <<< "scale=5;$tsdiff/3600")
+            cdiff=$((charge - $(cat /sys/class/power_supply/BAT0/energy_now)))
+            dis_raw=$(bc <<< "scale=5;($cdiff/1000000)/$tdiff")
+            dis=$(printf '%3.5f' "$dis_raw")
+            printf '[INFO] Duration: %02d:%02d:%02d\n' $((tsdiff/3600)) $((tsdiff%3600/60)) $((tsdiff%60))
+            echo "[INFO] Discharge rate: $dis W/h."
+        done < "$FILE"
+        rm "$FILE"
+        if [ $? -ne 0 ]; then
+            echo "[ERROR] Unable to remove $FILE"
+        fi
+    else
+        echo "[ERROR] Unable to read $FILE"
+    fi
+fi
