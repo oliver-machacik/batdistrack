@@ -12,10 +12,11 @@ if [ "${1}" == "pre" ]; then
 		echo "Saving time and charge."
 		date +'%s' > $FILE
 		cat /sys/class/power_supply/BAT0/energy_now >> $FILE
+		cat /sys/class/power_supply/BAT0/capacity >> $FILE
 	fi
 elif [ "${1}" == "post" ]; then
 	if [ -f "$FILE" ]; then
-		while read timestamp; read charge
+		while read timestamp; read charge; read percent
 		do
 			tsdiff=$((`date +'%s'` -  $timestamp))
 			tdiff=$(bc <<< "scale=5;$tsdiff/3600")
@@ -24,6 +25,7 @@ elif [ "${1}" == "post" ]; then
 
 			printf 'Suspend duration: %02dh:%02dm:%02ds\n' $((tsdiff/3600)) $((tsdiff%3600/60)) $((tsdiff%60))
 			echo Discharge rate: $dis W/h.
+			echo "Charge went from $percent to $(cat /sys/class/power_supply/BAT0/capacity) %"
 		done < $FILE
 		rm $FILE
 	fi
