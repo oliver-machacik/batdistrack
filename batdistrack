@@ -2,34 +2,83 @@
 
 FILE=/tmp/batdistrack
 
+# Dynamically find the AC / Mains power supply online path
+find_ac_path() {
+    for p in /sys/class/power_supply/*; do
+        if [ -f "$p/type" ] && [ "$(cat "$p/type")" = "Mains" ]; then
+            echo "$p/online"
+            return 0
+        fi
+    done
+    for name in AC ADP0 ADP1; do
+        if [ -f "/sys/class/power_supply/$name/online" ]; then
+            echo "/sys/class/power_supply/$name/online"
+            return 0
+        fi
+    done
+}
+
+# Get battery energy (supports energy_now or calculates energy equivalent via awk)
+get_battery_energy() {
+    local bat_dir="/sys/class/power_supply/BAT0"
+    if [ -f "$bat_dir/energy_now" ]; then
+        cat "$bat_dir/energy_now"
+    elif [ -f "$bat_dir/charge_now" ] && [ -f "$bat_dir/voltage_now" ]; then
+        awk -v c="$(cat "$bat_dir/charge_now")" -v v="$(cat "$bat_dir/voltage_now")" 'BEGIN { printf "%.0f\n", (c * v) / 1000000 }'
+    else
+        echo "0"
+    fi
+}
+
+AC_ONLINE_PATH=$(find_ac_path)
+
 if [ "${1}" == "pre" ]; then
-	if [[ "1" == `cat /sys/class/power_supply/AC/online` ]]; then
-		echo "Charging. Discharge during suspend will not be tracked."
-		if [[ -f "$FILE" ]]; then
-			rm $FILE
-		fi
-	else
-		echo "Saving time and charge."
-		date +'%s' > $FILE
-		cat /sys/class/power_supply/BAT0/energy_now >> $FILE
-		cat /sys/class/power_supply/BAT0/capacity >> $FILE
-	fi
+    if [ -n "$AC_ONLINE_PATH" ] && [ -f "$AC_ONLINE_PATH" ] && [ "$(cat "$AC_ONLINE_PATH")" == "1" ]; then
+        echo "Charging. Discharge during suspend will not be tracked."
+        if [[ -f "$FILE" ]]; then
+            rm "$FILE"
+        fi
+    else
+        echo "Saving time and charge."
+        date +'%s' > "$FILE"
+        get_battery_energy >> "$FILE"
+        cat /sys/class/power_supply/BAT0/capacity >> "$FILE"
+    fi
 elif [ "${1}" == "post" ]; then
-	if [ -f "$FILE" ]; then
-		while read timestamp; read charge; read percent
-		do
-			tsdiff=$((`date +'%s'` -  $timestamp))
-			tdiff=$(bc <<< "scale=5;$tsdiff/3600")
-			cdiff=$((charge - `cat /sys/class/power_supply/BAT0/energy_now`))
-			dis=$(bc <<< "scale=5;($cdiff/1000000)/$tdiff")
-
-			printf 'Suspend duration: %02dh:%02dm:%02ds\n' $((tsdiff/3600)) $((tsdiff%3600/60)) $((tsdiff%60))
-			echo Discharge rate: $dis W/h.
-			echo "Charge went from $percent to $(cat /sys/class/power_supply/BAT0/capacity) %"
-		done < $FILE
-		rm $FILE
-	fi
+    if [ -f "$FILE" ]; then
+        {
+            read timestamp
+            read charge
+            read percent
+        } < "$FILE"
+        
+        tsdiff=$(( $(date +'%s') - timestamp ))
+        if [ "$tsdiff" -gt 0 ]; then
+            current_energy=$(get_battery_energy)
+            cdiff=$(( charge - current_energy ))
+            
+            # Prevent negative consumption caused by voltage bounce-back on short tests
+            if [ "$cdiff" -lt 0 ]; then
+                cdiff=0
+            fi
+            
+            # Use awk for floating point calculations
+            awk -v tsdiff="$tsdiff" -v cdiff="$cdiff" -v percent="$percent" -v cur_pct="$(cat /sys/class/power_supply/BAT0/capacity)" '
+            BEGIN {
+                tdiff = tsdiff / 3600;
+                if (tdiff > 0) {
+                    dis = (cdiff / 1000000) / tdiff;
+                } else {
+                    dis = 0;
+                }
+                hours = int(tsdiff / 3600);
+                mins = int((tsdiff % 3600) / 60);
+                secs = int(tsdiff % 60);
+                printf("Suspend duration: %02dh:%02dm:%02ds\n", hours, mins, secs);
+                printf("Discharge rate: %.5f W/h.\n", dis);
+                printf("Charge went from %s to %s %%\n", percent, cur_pct);
+            }'
+        fi
+        rm "$FILE"
+    fi
 fi
-
-
-
